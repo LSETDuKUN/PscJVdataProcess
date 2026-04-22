@@ -16,6 +16,7 @@ class DataFile:
 
         self.area = None  # in cm^2
         self.data = []    # list of tuples: (V, I, P)
+        self.data_str = [] # raw string data to preserve exact representation
         self.J = []       # current density mA/cm2
 
         self.parse()
@@ -28,7 +29,11 @@ class DataFile:
         for line in lines:
             line = line.strip()
             if line.startswith("Sample Area"):
-                self.area = float(re.findall(r"[-+]?\d*\.\d+|\d+", line)[0])
+                parts = line.split(":")
+                if len(parts) > 1:
+                    match = re.findall(r"[-+]?\d*\.\d+(?:[Ee][-+]?\d+)?|\d+", parts[1])
+                    if match:
+                        self.area = float(match[0])
             elif "Voc" in line:
                 self.Voc = self.extract(line)
             elif "Jsc" in line:
@@ -56,6 +61,7 @@ class DataFile:
                     try:
                         v, i, p = map(float, parts)
                         self.data.append((v, i, p))
+                        self.data_str.append((parts[0], parts[1], parts[2]))
                         # calculate current density
                         if self.area and self.area > 0:
                             self.J.append(i / self.area)
