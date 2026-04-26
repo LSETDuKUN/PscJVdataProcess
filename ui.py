@@ -77,8 +77,20 @@ class App(QWidget):
         self.load_root_btn = QPushButton("Load Root Folder")
         self.load_root_btn.clicked.connect(self.load_root_folder)
 
+        # indicator copy controls
+        self.indicator_combo = QComboBox()
+        self.indicator_combo.addItems(["PCE", "Voc", "Jsc", "FF"])
+        self.copy_indicator_btn = QPushButton("Copy Indicator")
+        self.copy_indicator_btn.clicked.connect(self.copy_selected_indicator)
+
+        self.copy_pvjf_btn = QPushButton("Copy PCE/Voc/Jsc/FF")
+        self.copy_pvjf_btn.clicked.connect(self.copy_selected_metrics)
+
         load_layout.addWidget(self.load_btn)
         load_layout.addWidget(self.load_root_btn)
+        load_layout.addWidget(self.indicator_combo)
+        load_layout.addWidget(self.copy_indicator_btn)
+        load_layout.addWidget(self.copy_pvjf_btn)
         load_layout.addStretch(1)
         left_layout.addLayout(load_layout)
 
@@ -302,7 +314,7 @@ class App(QWidget):
         table.setColumnCount(6)
         table.setHorizontalHeaderLabels(["Folder", "File", "PCE", "FF", "Jsc", "Voc"])
         table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        table.setSelectionMode(QAbstractItemView.SingleSelection)
+        table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         table.verticalHeader().setVisible(False)
         table.setAlternatingRowColors(True)
@@ -468,7 +480,12 @@ class App(QWidget):
         if sender not in (self.table_eff, self.table_uneff):
             return
 
-        # keep single selection across two tables
+        # 多选时：不互相清空选择（否则无法跨行/跨表选择）；也不自动刷新右侧表/绘图
+        selected_rows_sender = sender.selectionModel().selectedRows()
+        if len(selected_rows_sender) != 1:
+            return
+
+        # keep single selection across two tables ONLY when it's a single-row selection
         if sender == self.table_eff:
             self.table_uneff.clearSelection()
             files = self.effective
@@ -532,17 +549,48 @@ class App(QWidget):
 
         QApplication.clipboard().setText("\n".join(out_lines))
 
+    def copy_selected_metrics(self):
+        """Copy PCE/Voc/Jsc/FF of selected file rows to clipboard as TSV."""
+        files = self._selected_files_from_tables()
+        if not files:
+            return
+
+        header = "File\tPCE\tVoc\tJsc\tFF"
+        lines = [header]
+        for f in files:
+            def fmt(v):
+                return self._fmt(v)
+            lines.append(
+                "\t".join([
+                    getattr(f, "name", ""),
+                    fmt(getattr(f, "PCE", None)),
+                    fmt(getattr(f, "Voc", None)),
+                    fmt(getattr(f, "Jsc", None)),
+                    fmt(getattr(f, "FF", None)),
+                ])
+            )
+
+        QApplication.clipboard().setText("\n".join(lines))
+
+    def copy_selected_indicator(self):
+        """Copy selected indicator values (single column) for selected file rows."""
+        files = self._selected_files_from_tables()
+        if not files:
+            return
+
+        key = self.indicator_combo.currentText().strip()
+        # Map UI text to attribute name (currently same)
+        attr = key
+
+        lines = [key]
+        for f in files:
+            lines.append(self._fmt(getattr(f, attr, None)))
+
+        QApplication.clipboard().setText("\n".join(lines))
+
     def plot_selected(self):
-        selected = []
-
-        sel_eff = self.table_eff.selectionModel().selectedRows()
-        if sel_eff:
-            selected.append(self.effective[sel_eff[0].row()])
-
-        sel_uneff = self.table_uneff.selectionModel().selectedRows()
-        if sel_uneff:
-            selected.append(self.uneffective[sel_uneff[0].row()])
-
+        # 支持多选绘图：把两张表当前选中的所有行都画出来
+        selected = self._selected_files_from_tables()
         if not selected:
             return
 
@@ -586,3 +634,27 @@ class App(QWidget):
         ax.legend(frameon=False, fontsize=9)
         self.canvas.fig.tight_layout()
         self.canvas.draw()
+
+    def _selected_files_from_tables(self):
+        """Collect selected DataFile objects from both file tables (supports multi-select)."""
+        selected = []
+
+        def _rows(table):
+            try:
+                sm = table.selectionModel()
+                if sm is None:
+                    return []
+                return [ix.row() for ix in sm.selectedRows()]
+            except Exception:
+                return []
+
+        for r in _rows(self.table_eff):
+            if 0 <= r < len(self.effective):
+                selected.append(self.effective[r])
+
+        for r in _rows(self.table_uneff):
+            if 0 <= r < len(self.uneffective):
+                selected.append(self.uneffective[r])
+
+        return selected
+
