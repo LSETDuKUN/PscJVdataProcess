@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QAbstractItemView, QApplication
 )
 from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QSettings
 
 from reader import DataFile
 from filter_sort import filter_files, sort_files
@@ -22,9 +23,14 @@ class MplCanvas(FigureCanvas):
 
 
 class App(QWidget):
+    SETTINGS_ORG = "JVdataProcess"
+    SETTINGS_APP = "SolarDataAnalyzer"
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Solar Data Analyzer")
+
+        self._settings = QSettings(self.SETTINGS_ORG, self.SETTINGS_APP)
 
         self.files = []
         self.effective = []
@@ -51,20 +57,20 @@ class App(QWidget):
         self._apply_styles()
 
         main_layout = QHBoxLayout()
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(10)
+        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(12)
 
         splitter = QSplitter()
 
         # ---- Left panel ----
         left_panel = QWidget()
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(8, 8, 8, 8)
-        left_layout.setSpacing(8)
+        left_layout.setContentsMargins(10, 10, 10, 10)
+        left_layout.setSpacing(10)
 
         # load controls
         load_layout = QHBoxLayout()
-        load_layout.setSpacing(8)
+        load_layout.setSpacing(10)
         self.load_btn = QPushButton("Load Folder")
         self.load_btn.clicked.connect(self.load_folder)
 
@@ -78,7 +84,7 @@ class App(QWidget):
 
         # filters
         f_layout = QHBoxLayout()
-        f_layout.setSpacing(8)
+        f_layout.setSpacing(10)
 
         self.pce = QLineEdit(); self.pce.setPlaceholderText("min PCE")
         self.logic1 = QComboBox(); self.logic1.addItems(["AND", "OR"])
@@ -99,10 +105,10 @@ class App(QWidget):
 
         # file tables
         tbls_layout = QHBoxLayout()
-        tbls_layout.setSpacing(10)
+        tbls_layout.setSpacing(12)
 
         eff_layout = QVBoxLayout()
-        eff_layout.setSpacing(6)
+        eff_layout.setSpacing(8)
         lbl_eff = QLabel("Effective")
         lbl_eff.setProperty("class", "sectionTitle")
         eff_layout.addWidget(lbl_eff)
@@ -113,7 +119,7 @@ class App(QWidget):
         eff_layout.addWidget(self.table_eff)
 
         uneff_layout = QVBoxLayout()
-        uneff_layout.setSpacing(6)
+        uneff_layout.setSpacing(8)
         lbl_uneff = QLabel("Uneffective")
         lbl_uneff.setProperty("class", "sectionTitle")
         uneff_layout.addWidget(lbl_uneff)
@@ -129,7 +135,7 @@ class App(QWidget):
 
         # plot settings + button
         plot_ctl_layout = QHBoxLayout()
-        plot_ctl_layout.setSpacing(8)
+        plot_ctl_layout.setSpacing(10)
         self.xmin = QLineEdit(); self.xmin.setPlaceholderText("X min")
         self.xmax = QLineEdit(); self.xmax.setPlaceholderText("X max")
         self.ymin = QLineEdit(); self.ymin.setPlaceholderText("Y min")
@@ -157,11 +163,11 @@ class App(QWidget):
         # ---- Right panel ----
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(8, 8, 8, 8)
-        right_layout.setSpacing(8)
+        right_layout.setContentsMargins(10, 10, 10, 10)
+        right_layout.setSpacing(10)
 
         data_hdr = QHBoxLayout()
-        data_hdr.setSpacing(8)
+        data_hdr.setSpacing(10)
         title = QLabel("Data Table")
         title.setProperty("class", "sectionTitle")
         data_hdr.addWidget(title)
@@ -191,52 +197,104 @@ class App(QWidget):
         main_layout.addWidget(splitter)
         self.setLayout(main_layout)
 
+        # auto reload last folder
+        self._try_auto_load_last_folder()
+
+    def _try_auto_load_last_folder(self):
+        last_path = self._settings.value("last_path", "", type=str)
+        recursive = self._settings.value("last_recursive", False, type=bool)
+        if last_path and os.path.isdir(last_path):
+            self._load_from_folder(last_path, recursive=recursive)
+
+    def _persist_last_folder(self, folder: str, recursive: bool):
+        self._settings.setValue("last_path", folder)
+        self._settings.setValue("last_recursive", bool(recursive))
+        self._settings.sync()
+
     def _apply_styles(self):
         self.setStyleSheet(
             """
-            QWidget { font-size: 12px; }
-            QLabel[class='sectionTitle'] { font-weight: 700; font-size: 13px; color: #263238; }
+            QWidget { font-size: 14px; }
+            QLabel { color: #263238; }
+            QLabel[class='sectionTitle'] { font-weight: 700; font-size: 15px; color: #1F2937; }
 
             QLineEdit, QComboBox {
-                padding: 5px 8px;
+                min-height: 30px;
+                padding: 6px 10px;
                 border: 1px solid #CFD8DC;
-                border-radius: 6px;
+                border-radius: 8px;
                 background: #FFFFFF;
                 selection-background-color: #90CAF9;
             }
             QLineEdit:focus, QComboBox:focus { border: 1px solid #42A5F5; }
 
             QPushButton {
-                padding: 6px 10px;
-                border-radius: 6px;
+                min-height: 32px;
+                padding: 7px 12px;
+                border-radius: 8px;
                 border: 1px solid #B0BEC5;
                 background: #ECEFF1;
+                font-weight: 600;
             }
             QPushButton:hover { background: #E0E0E0; }
             QPushButton:pressed { background: #CFD8DC; }
             QPushButton[class='primary'] {
-                background: #43A047;
+                background: #16A34A;
                 color: white;
-                border: 1px solid #2E7D32;
-                font-weight: 700;
+                border: 1px solid #15803D;
+                font-weight: 800;
             }
-            QPushButton[class='primary']:hover { background: #388E3C; }
+            QPushButton[class='primary']:hover { background: #15803D; }
+
+            QSplitter::handle { background: #E5E7EB; }
 
             QTableWidget {
                 border: 1px solid #CFD8DC;
-                border-radius: 6px;
+                border-radius: 8px;
                 gridline-color: #ECEFF1;
                 background: #FFFFFF;
                 alternate-background-color: #FAFAFA;
+                selection-background-color: #BBDEFB;
             }
             QHeaderView::section {
-                background: #F5F5F5;
-                padding: 6px;
+                background: #F3F4F6;
+                padding: 8px;
                 border: 0px;
                 border-bottom: 1px solid #CFD8DC;
-                font-weight: 700;
+                font-weight: 800;
+                font-size: 13px;
                 color: #37474F;
             }
+
+            QScrollBar:vertical {
+                border: none;
+                background: #F3F4F6;
+                width: 12px;
+                margin: 0px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background: #C7CDD1;
+                min-height: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical:hover { background: #AEB6BC; }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+
+            QScrollBar:horizontal {
+                border: none;
+                background: #F3F4F6;
+                height: 12px;
+                margin: 0px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #C7CDD1;
+                min-width: 20px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:horizontal:hover { background: #AEB6BC; }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0px; }
             """
         )
 
@@ -302,12 +360,14 @@ class App(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Select Folder")
         if not folder:
             return
+        self._persist_last_folder(folder, recursive=False)
         self._load_from_folder(folder, recursive=False)
 
     def load_root_folder(self):
         root = QFileDialog.getExistingDirectory(self, "Select Root Folder")
         if not root:
             return
+        self._persist_last_folder(root, recursive=True)
         self._load_from_folder(root, recursive=True)
 
     def _load_from_folder(self, folder: str, recursive: bool):
