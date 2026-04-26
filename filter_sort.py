@@ -25,5 +25,29 @@ def filter_files(files, min_pce=0, min_voc=0, min_jsc=0, min_ff=0, logic=("AND",
     return effective, uneffective
 
 
-def sort_files(files, key="PCE", reverse=True):
-    return sorted(files, key=lambda x: getattr(x, key) or 0, reverse=reverse)
+def _none_safe(value, none_last=True):
+    if value is None:
+        # (is_none, value)
+        return (1 if none_last else -1, 0)
+    return (0, value)
+
+
+def sort_files(files, key="PCE", reverse=True, none_last=True):
+    """Sort by a single attribute."""
+    return sorted(
+        files,
+        key=lambda x: _none_safe(getattr(x, key, None), none_last=none_last),
+        reverse=reverse,
+    )
+
+
+def sort_files_by(files, keys, none_last=True):
+    """Sort by multiple keys.
+
+    keys: list[tuple[str, bool]] => [("PCE", True), ("Voc", True)] where bool is reverse.
+    """
+    out = list(files)
+    # Python sort is stable; apply from last key to first key
+    for k, rev in reversed(keys):
+        out.sort(key=lambda x: _none_safe(getattr(x, k, None), none_last=none_last), reverse=rev)
+    return out

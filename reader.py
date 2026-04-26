@@ -21,33 +21,80 @@ class DataFile:
 
         self.parse()
 
+    def _extract_by_key(self, line: str, key: str):
+        """Extract numeric value from a 'key: value' / 'key = value' style line.
+
+        This avoids accidentally capturing unrelated numbers on the same line.
+        """
+        # Example matches:
+        #   Jsc: 22.1
+        #   Jsc (mA/cm2) = 22.1
+        #   Voc	0.98
+        pattern = rf"\b{re.escape(key)}\b\s*(?:\([^)]*\))?\s*[:=\t ]\s*([-+]?\d*\.?\d+(?:[Ee][-+]?\d+)?)"
+        m = re.search(pattern, line, flags=re.IGNORECASE)
+        if m:
+            try:
+                return float(m.group(1))
+            except Exception:
+                return None
+        return None
+
     def parse(self):
         with open(self.path, 'r') as f:
             lines = f.readlines()
 
         # parse indicators and area
-        for line in lines:
-            line = line.strip()
-            if line.startswith("Sample Area"):
-                parts = line.split(":")
+        for raw in lines:
+            line = raw.strip()
+            if not line:
+                continue
+
+            if line.lower().startswith("sample area"):
+                parts = line.split(":", 1)
                 if len(parts) > 1:
                     match = re.findall(r"[-+]?\d*\.\d+(?:[Ee][-+]?\d+)?|\d+", parts[1])
                     if match:
                         self.area = float(match[0])
-            elif "Voc" in line:
-                self.Voc = self.extract(line)
-            elif "Jsc" in line:
-                self.Jsc = self.extract(line)
-            elif "Isc" in line:
-                self.Isc = self.extract(line)
-            elif "Fill Factor" in line:
+                continue
+
+            # Skip potential table header lines
+            if "v(v)" in line.lower() and "i(ma)" in line.lower() and "p(mw)" in line.lower():
+                continue
+
+            # Prefer strict key-based extraction to avoid mis-parsing
+            val = self._extract_by_key(line, "Voc")
+            if val is not None:
+                self.Voc = val
+                continue
+
+            val = self._extract_by_key(line, "Jsc")
+            if val is not None:
+                self.Jsc = val
+                continue
+
+            val = self._extract_by_key(line, "Isc")
+            if val is not None:
+                self.Isc = val
+                continue
+
+            if "fill factor" in line.lower():
                 self.FF = self.extract(line)
-            elif "Efficiency" in line:
+                continue
+
+            if "efficiency" in line.lower():
                 self.PCE = self.extract(line)
-            elif "Rs" in line:
-                self.Rs = self.extract(line)
-            elif "Rsh" in line:
-                self.Rsh = self.extract(line)
+                continue
+
+            # Avoid matching Rs/Rsh inside other words
+            val = self._extract_by_key(line, "Rs")
+            if val is not None:
+                self.Rs = val
+                continue
+
+            val = self._extract_by_key(line, "Rsh")
+            if val is not None:
+                self.Rsh = val
+                continue
 
         # parse V-I-P table
         start = False
@@ -75,3 +122,4 @@ class DataFile:
         if match:
             return float(match[0])
         return None
+
