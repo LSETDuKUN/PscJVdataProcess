@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="70872d98-1fb5-492e-9100-ef7594e50eb5" name="更改" comment="Copy Jsc/PCE/FF/Voc optimized">
+    <list default="true" id="70872d98-1fb5-492e-9100-ef7594e50eb5" name="更改" comment="optimized">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/reader.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui.py" afterDir="false" />
@@ -106,6 +106,9 @@
       <workItem from="1777382654622" duration="439000" />
       <workItem from="1777388257269" duration="1644000" />
       <workItem from="1777725655985" duration="116000" />
+      <workItem from="1778466665700" duration="1752000" />
+      <workItem from="1778468477259" duration="300000" />
+      <workItem from="1778468790440" duration="279000" />
     </task>
     <task id="LOCAL-00001" summary="create and first improvement">
       <option name="closed" value="true" />
@@ -155,7 +158,15 @@
       <option name="project" value="LOCAL" />
       <updated>1777204525263</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="optimized">
+      <option name="closed" value="true" />
+      <created>1778466747809</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1778466747809</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -178,9 +189,10 @@
     <MESSAGE value="third improvement" />
     <MESSAGE value="ui improvement" />
     <MESSAGE value="Copy Jsc/PCE/FF/Voc optimized" />
-    <option name="LAST_COMMIT_MESSAGE" value="Copy Jsc/PCE/FF/Voc optimized" />
+    <MESSAGE value="optimized" />
+    <option name="LAST_COMMIT_MESSAGE" value="optimized" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/JVdataProcess$main.coverage" NAME="main 覆盖结果" MODIFIED="1777725658667" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/JVdataProcess$main.coverage" NAME="main 覆盖结果" MODIFIED="1778469046497" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

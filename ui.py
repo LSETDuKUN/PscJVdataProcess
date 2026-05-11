@@ -1,4 +1,5 @@
 import os
+import math
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton, QFileDialog,
     QLineEdit, QHBoxLayout, QLabel,
@@ -451,12 +452,19 @@ class App(QWidget):
             folder = getattr(f, "folder", "")
             table.setItem(r, 0, QTableWidgetItem(folder))
             table.setItem(r, 1, QTableWidgetItem(getattr(f, "name", "")))
-            table.setItem(r, 2, QTableWidgetItem(self._fmt(getattr(f, "PCE", None))))
-            table.setItem(r, 3, QTableWidgetItem(self._fmt(getattr(f, "FF", None))))
-            table.setItem(r, 4, QTableWidgetItem(self._fmt(getattr(f, "Jsc", None))))
-            table.setItem(r, 5, QTableWidgetItem(self._fmt(getattr(f, "Voc", None))))
-            table.setItem(r, 6, QTableWidgetItem(self._fmt(getattr(f, "Rs", None))))
-            table.setItem(r, 7, QTableWidgetItem(self._fmt(getattr(f, "Rsh", None))))
+
+            # PCE, FF, Jsc, Rs, Rsh formatted to 2 decimal places
+            for i, key in enumerate(["PCE", "FF", "Jsc", "Rs", "Rsh"]):
+                val = getattr(f, key, None)
+                item = QTableWidgetItem(f"{val:.2f}" if val is not None else "")
+                # PCE is col 2, FF is 3, Jsc is 4, Rs is 6, Rsh is 7
+                col_map = {"PCE": 2, "FF": 3, "Jsc": 4, "Rs": 6, "Rsh": 7}
+                table.setItem(r, col_map[key], item)
+
+            # Voc in mV, integer
+            voc_val = getattr(f, "Voc", None)
+            voc_item = QTableWidgetItem(f"{voc_val * 1000:.0f}" if voc_val is not None else "")
+            table.setItem(r, 5, voc_item)
 
             # color rows by folder
             bg = self._color_for_folder(folder)
@@ -623,11 +631,18 @@ class App(QWidget):
         for spine in ax.spines.values():
             spine.set_linewidth(1.5)
 
+        max_v = 0
+        max_j = 0
+
         for f in files:
             if not f.data:
                 continue
             V = [x[0] for x in f.data]
             J = f.J
+            if V:
+                max_v = max(max_v, max(V))
+            if J:
+                max_j = max(max_j, max(J))
             ax.plot(V, J, marker='o', linestyle='-', linewidth=2, markersize=4, label=f.name)
 
         ax.set_xlabel("Voltage (V)")
@@ -636,8 +651,13 @@ class App(QWidget):
 
         if xlim and xlim[0] is not None and xlim[1] is not None:
             ax.set_xlim(xlim)
+        else:
+            ax.set_xlim(0, math.ceil(max_v))
+
         if ylim and ylim[0] is not None and ylim[1] is not None:
             ax.set_ylim(ylim)
+        else:
+            ax.set_ylim(0, math.ceil(max_j))
 
         ax.legend(frameon=False, fontsize=9)
         self.canvas.fig.tight_layout()
@@ -665,4 +685,3 @@ class App(QWidget):
                 selected.append(self.uneffective[r])
 
         return selected
-

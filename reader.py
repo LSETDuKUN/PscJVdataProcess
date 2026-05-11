@@ -61,7 +61,18 @@ class DataFile:
                     match = re.findall(r"[-+]?\d*\.\d+(?:[Ee][-+]?\d+)?|\d+", parts[1])
                     if match:
                         self.area = float(match[0])
-                continue
+
+            # Extract Voc and convert to mV (integer)
+            if "voc" in line.lower():
+                voc_value = self._extract_by_key(line, "Voc")
+                if voc_value is not None:
+                    self.Voc = round(voc_value * 1000)  # Convert to mV and round to integer
+
+            # Extract FF and format to 2 decimal places
+            if "ff" in line.lower():
+                ff_value = self._extract_by_key(line, "FF")
+                if ff_value is not None:
+                    self.FF = round(ff_value, 2)  # Keep 2 decimal places
 
             # Skip potential table header lines
             if "v(v)" in line.lower() and "i(ma)" in line.lower() and "p(mw)" in line.lower():
