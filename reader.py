@@ -1,9 +1,11 @@
 import re
+import os
 
 class DataFile:
     def __init__(self, path):
         self.path = path
-        self.name = path.split("/")[-1]
+        # 兼容 Windows 路径分隔符
+        self.name = os.path.basename(path)
 
         # indicators
         self.Voc = None
@@ -40,12 +42,16 @@ class DataFile:
         return None
 
     def parse(self):
-        with open(self.path, 'r') as f:
-            lines = f.readlines()
+        ext = os.path.splitext(self.path)[1].lower()
+        if ext in (".xls", ".xlsx"):
+            lines = self._read_excel_as_lines()
+        else:
+            with open(self.path, 'r', encoding='utf-8', errors='ignore') as f:
+                lines = f.readlines()
 
         # parse indicators and area
         for raw in lines:
-            line = raw.strip()
+            line = str(raw).strip()
             if not line:
                 continue
 
@@ -99,11 +105,12 @@ class DataFile:
         # parse V-I-P table
         start = False
         for line in lines:
+            line = str(line)
             if "V(V)" in line and "I(mA)" in line and "P(mW)" in line:
                 start = True
                 continue
             if start:
-                parts = line.strip().split()
+                parts = str(line).strip().split()
                 if len(parts) == 3:
                     try:
                         v, i, p = map(float, parts)
@@ -123,3 +130,48 @@ class DataFile:
             return float(match[0])
         return None
 
+    def _read_excel_as_lines(self):
+        """把 Excel 的内容转换成与 txt 近似的行列表（字符串），以复用现有解析逻辑。"""
+        try:
+            import pandas as pd
+        except Exception as e:
+            raise RuntimeError("读取 Excel 需要安装 pandas") from e
+
+        # pandas 读取 .xlsx 依赖 openpyxl；.xls 一般需要 xlrd。
+        try:
+            df = pd.read_excel(self.path, header=None, engine=None)
+        except Exception:
+            # 给出更明确的错误信息（避免静默失败）
+            ext = os.path.splitext(self.path)[1].lower()
+            if ext == ".xlsx":
+                raise RuntimeError("读取 .xlsx 失败：请确认已安装 openpyxl")
+            if ext == ".xls":
+                raise RuntimeError("读取 .xls 失败：建议将文件另存为 .xlsx，或安装 xlrd(<=1.2) 后再试")
+            raise
+
+        lines = []
+        for _, row in df.iterrows():
+            vals = []
+            for v in row.tolist():
+                if v is None:
+                    continue
+                # pandas/numpy NaN
+                try:
+                    if pd.isna(v):
+                        continue
+                except Exception:
+                    pass
+                s = str(v).strip()
+                if s != "":
+                    vals.append(s)
+            if not vals:
+                continue
+
+            # 单列：保留为一行文本（用于诸如 "Sample area: ..." / "Voc ..." 等指标行）
+            if len(vals) == 1:
+                lines.append(vals[0] + "\n")
+            else:
+                # 多列：用空格拼接，匹配原先的 split() 行为（例如 V I P 三列）
+                lines.append(" ".join(vals) + "\n")
+
+        return lines

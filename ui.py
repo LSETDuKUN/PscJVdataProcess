@@ -46,6 +46,8 @@ class App(QWidget):
             3: "FF",
             4: "Jsc",
             5: "Voc",
+            6: "Rs",
+            7: "Rsh",
         }
 
         self._folder_colors = {}
@@ -79,7 +81,7 @@ class App(QWidget):
 
         # indicator copy controls
         self.indicator_combo = QComboBox()
-        self.indicator_combo.addItems(["PCE", "Voc", "Jsc", "FF"])
+        self.indicator_combo.addItems(["PCE", "Voc", "Jsc", "FF", "Rs", "Rsh"])
         self.copy_indicator_btn = QPushButton("Copy Indicator")
         self.copy_indicator_btn.clicked.connect(self.copy_selected_indicator)
 
@@ -311,8 +313,8 @@ class App(QWidget):
         )
 
     def _init_file_table(self, table: QTableWidget):
-        table.setColumnCount(6)
-        table.setHorizontalHeaderLabels(["Folder", "File", "PCE", "FF", "Jsc", "Voc"])
+        table.setColumnCount(8)
+        table.setHorizontalHeaderLabels(["Folder", "File", "PCE", "FF", "Jsc", "Voc", "Rs", "Rsh"])
         table.setSelectionBehavior(QAbstractItemView.SelectRows)
         table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         table.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -386,17 +388,21 @@ class App(QWidget):
         self.files.clear()
         self._folder_colors.clear()
 
+        def _is_supported(fn: str) -> bool:
+            l = fn.lower()
+            return l.endswith(".txt") or l.endswith(".xls") or l.endswith(".xlsx")
+
         if recursive:
             for dirpath, _, filenames in os.walk(folder):
                 for fn in filenames:
-                    if fn.endswith(".txt"):
+                    if _is_supported(fn):
                         path = os.path.join(dirpath, fn)
                         df = DataFile(path)
                         df.folder = os.path.relpath(dirpath, folder)
                         self.files.append(df)
         else:
             for fn in os.listdir(folder):
-                if fn.endswith(".txt"):
+                if _is_supported(fn):
                     path = os.path.join(folder, fn)
                     df = DataFile(path)
                     df.folder = os.path.basename(folder)
@@ -449,6 +455,8 @@ class App(QWidget):
             table.setItem(r, 3, QTableWidgetItem(self._fmt(getattr(f, "FF", None))))
             table.setItem(r, 4, QTableWidgetItem(self._fmt(getattr(f, "Jsc", None))))
             table.setItem(r, 5, QTableWidgetItem(self._fmt(getattr(f, "Voc", None))))
+            table.setItem(r, 6, QTableWidgetItem(self._fmt(getattr(f, "Rs", None))))
+            table.setItem(r, 7, QTableWidgetItem(self._fmt(getattr(f, "Rsh", None))))
 
             # color rows by folder
             bg = self._color_for_folder(folder)
